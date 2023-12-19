@@ -1,3 +1,8 @@
+use crate::quarto::State;
+
+mod quarto;
+
 fn main() {
-    println!("Hello, world!");
+    let game = State::new();
+    game.print();
 }
