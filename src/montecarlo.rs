@@ -3,11 +3,26 @@ use crate::random::random_action;
 use rand::{thread_rng, Rng};
 use std::cmp::max;
 
+fn find_winning_place(state: &State) -> Option<(usize, usize)> {
+    for (h, w) in state.legal_placements() {
+        if state.can_put_then_win(h, w) {
+            return Some((h, w));
+        }
+    }
+    None
+}
+
 fn playout(state: &mut State) -> f64 {
     match state.get_winning_status() {
         WinningStatus::WIN => 1.0,
         WinningStatus::DRAW => 0.5,
         WinningStatus::NONE => {
+            let winning_place = find_winning_place(state);
+            if let Some((h, w)) = winning_place {
+                state.put_piece(h, w);
+                return 1.0;
+            }
+
             let (place, piece) = random_action(state);
             if let Some(p) = place {
                 state.put_piece(p.0, p.1);
