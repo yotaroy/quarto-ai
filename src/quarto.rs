@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Formatter;
+use std::str::FromStr;
 
 const SIZE: usize = 4;
 
@@ -14,11 +15,50 @@ pub struct Piece {
 
 impl fmt::Display for Piece {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "({}{}{}{})",
-            self.color, self.shape, self.height, self.top
-        )
+        write!(f, "{}{}{}{}", self.color, self.shape, self.height, self.top)
+    }
+}
+
+impl FromStr for Piece {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 4 {
+            return Err(());
+        }
+        let color = s.chars().nth(0);
+        let shape = s.chars().nth(1);
+        let height = s.chars().nth(2);
+        let top = s.chars().nth(3);
+        if color.is_none() || shape.is_none() || height.is_none() || top.is_none() {
+            return Err(());
+        }
+        let color = match color.unwrap() {
+            'B' => Color::Black,
+            'W' => Color::White,
+            _ => return Err(()),
+        };
+        let shape = match shape.unwrap() {
+            'S' => Shape::Square,
+            'C' => Shape::Circle,
+            _ => return Err(()),
+        };
+        let height = match height.unwrap() {
+            'T' => Height::Tall,
+            'S' => Height::Short,
+            _ => return Err(()),
+        };
+        let top = match top.unwrap() {
+            'F' => Top::Flat,
+            'H' => Top::Hole,
+            _ => return Err(()),
+        };
+        Ok(Piece {
+            color,
+            shape,
+            height,
+            top,
+        })
     }
 }
 
@@ -148,39 +188,29 @@ impl State {
         self.active_player = self.active_player ^ 1;
     }
 
+    pub fn can_put_then_win(&self, h: usize, w: usize) -> bool {
+        let mut board = self.board;
+        board[h][w] = self.selected_piece;
+        Self::can_win_board(&board)
+    }
+
     pub fn can_win(&self) -> bool {
+        Self::can_win_board(&self.board)
+    }
+
+    fn can_win_board(board: &[[Option<Piece>; SIZE]; SIZE]) -> bool {
         for i in 0..SIZE {
-            if Self::have_common_attribute([
-                self.board[i][0],
-                self.board[i][1],
-                self.board[i][2],
-                self.board[i][3],
-            ]) {
+            if Self::have_common_attribute([board[i][0], board[i][1], board[i][2], board[i][3]]) {
                 return true;
             }
-            if Self::have_common_attribute([
-                self.board[0][i],
-                self.board[1][i],
-                self.board[2][i],
-                self.board[3][i],
-            ]) {
+            if Self::have_common_attribute([board[0][i], board[1][i], board[2][i], board[3][i]]) {
                 return true;
             }
         }
-        if Self::have_common_attribute([
-            self.board[0][0],
-            self.board[1][1],
-            self.board[2][2],
-            self.board[3][3],
-        ]) {
+        if Self::have_common_attribute([board[0][0], board[1][1], board[2][2], board[3][3]]) {
             return true;
         }
-        if Self::have_common_attribute([
-            self.board[0][3],
-            self.board[1][2],
-            self.board[2][1],
-            self.board[3][0],
-        ]) {
+        if Self::have_common_attribute([board[0][3], board[1][2], board[2][1], board[3][0]]) {
             return true;
         }
 
@@ -267,7 +297,7 @@ impl fmt::Display for State {
             for w in 0..SIZE {
                 write!(f, "| ");
                 match self.board[h][w] {
-                    Some(ref piece) => write!(f, "{}", piece)?,
+                    Some(ref piece) => write!(f, "({})", piece)?,
                     None => write!(f, "(    )")?,
                 }
                 write!(f, " ");
