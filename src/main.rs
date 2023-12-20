@@ -2,6 +2,7 @@ use crate::play::human_action;
 use crate::random::random_action;
 use play::play_game;
 
+mod montecarlo;
 mod play;
 mod quarto;
 mod random;

@@ -13,6 +13,29 @@ pub struct Piece {
     top: Top,
 }
 
+impl Piece {
+    pub fn get_idx(&self) -> (usize, usize, usize, usize) {
+        (
+            match self.color {
+                Color::Black => 0,
+                Color::White => 1,
+            },
+            match self.shape {
+                Shape::Square => 0,
+                Shape::Circle => 1,
+            },
+            match self.height {
+                Height::Tall => 0,
+                Height::Short => 1,
+            },
+            match self.top {
+                Top::Flat => 0,
+                Top::Hole => 1,
+            },
+        )
+    }
+}
+
 impl fmt::Display for Piece {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}{}{}", self.color, self.shape, self.height, self.top)
@@ -122,9 +145,10 @@ impl fmt::Display for Top {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct State {
     turn: usize,
-    unused_pieces: HashSet<Piece>,
+    unused_pieces: [[[[bool; 2]; 2]; 2]; 2],
     board: [[Option<Piece>; SIZE]; SIZE],
     active_player: usize,
     selected_piece: Option<Piece>,
@@ -132,24 +156,9 @@ pub struct State {
 
 impl State {
     pub fn new() -> Self {
-        let mut unused_pieces = HashSet::new();
-        for c in [Color::Black, Color::White] {
-            for s in [Shape::Square, Shape::Circle] {
-                for h in [Height::Tall, Height::Short] {
-                    for t in [Top::Flat, Top::Hole] {
-                        unused_pieces.insert(Piece {
-                            color: c,
-                            shape: s,
-                            height: h,
-                            top: t,
-                        });
-                    }
-                }
-            }
-        }
         State {
             turn: 0,
-            unused_pieces,
+            unused_pieces: [[[[true; 2]; 2]; 2]; 2],
             board: [[None; SIZE]; SIZE],
             active_player: 0,
             selected_piece: None,
@@ -172,8 +181,25 @@ impl State {
         self.turn == 0
     }
 
-    pub fn legal_pieces(&self) -> Vec<&Piece> {
-        self.unused_pieces.iter().collect()
+    pub fn legal_pieces(&self) -> Vec<Piece> {
+        let mut pieces = Vec::new();
+        for (idx0, &c) in [Color::Black, Color::White].iter().enumerate() {
+            for (idx1, &s) in [Shape::Square, Shape::Circle].iter().enumerate() {
+                for (idx2, &h) in [Height::Tall, Height::Short].iter().enumerate() {
+                    for (idx3, &t) in [Top::Flat, Top::Hole].iter().enumerate() {
+                        if self.unused_pieces[idx0][idx1][idx2][idx3] {
+                            pieces.push(Piece {
+                                color: c,
+                                shape: s,
+                                height: h,
+                                top: t,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        pieces
     }
 
     pub fn put_piece(&mut self, h: usize, w: usize) {
@@ -182,7 +208,8 @@ impl State {
     }
 
     pub fn select_piece(&mut self, piece: Piece) {
-        self.unused_pieces.remove(&piece);
+        let (idx0, idx1, idx2, idx3) = piece.get_idx();
+        self.unused_pieces[idx0][idx1][idx2][idx3] = false;
         self.selected_piece = Some(piece);
         self.turn += 1;
         self.active_player = self.active_player ^ 1;
@@ -236,7 +263,21 @@ impl State {
     }
 
     pub fn is_done(&self) -> bool {
-        self.unused_pieces.is_empty() || self.can_win()
+        if self.can_win() {
+            return true;
+        }
+        for x in self.unused_pieces {
+            for y in x {
+                for z in y {
+                    for w in z {
+                        if w {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        true
     }
 
     pub fn get_winning_status(&self) -> WinningStatus {
@@ -278,8 +319,9 @@ impl State {
         if self.selected_piece.is_some() {
             println!("selected piece: {}", self.selected_piece.unwrap());
         }
-        print!("unused pieces: {}\t", self.unused_pieces.len());
-        for piece in &self.unused_pieces {
+        let unused_pieces = self.legal_pieces();
+        print!("unused pieces: {}\t", unused_pieces.len());
+        for piece in &unused_pieces {
             print!("{} ", piece);
         }
         println!();
@@ -295,12 +337,12 @@ impl fmt::Display for State {
             writeln!(f, "  +--------+--------+--------+--------+")?;
             write!(f, "{} ", h)?;
             for w in 0..SIZE {
-                write!(f, "| ");
+                write!(f, "| ")?;
                 match self.board[h][w] {
                     Some(ref piece) => write!(f, "({})", piece)?,
                     None => write!(f, "(    )")?,
                 }
-                write!(f, " ");
+                write!(f, " ")?;
             }
             writeln!(f, "|")?;
         }
