@@ -219,7 +219,7 @@ impl State {
         WinningStatus::DRAW
     }
 
-    fn is_first_player(&self) -> bool {
+    pub fn is_first_player(&self) -> bool {
         self.active_player == 0
     }
 
@@ -253,14 +253,17 @@ impl State {
             print!("{} ", piece);
         }
         println!();
+        println!();
         println!("{}", self);
     }
 }
 
 impl fmt::Display for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        writeln!(f, "      0        1        2        3     ")?;
         for h in 0..SIZE {
-            writeln!(f, "+--------+--------+--------+--------+")?;
+            writeln!(f, "  +--------+--------+--------+--------+")?;
+            write!(f, "{} ", h)?;
             for w in 0..SIZE {
                 write!(f, "| ");
                 match self.board[h][w] {
@@ -271,7 +274,7 @@ impl fmt::Display for State {
             }
             writeln!(f, "|")?;
         }
-        writeln!(f, "+--------+--------+--------+--------+")?;
+        writeln!(f, "  +--------+--------+--------+--------+")?;
         Ok(())
     }
 }
@@ -281,51 +284,4 @@ pub enum WinningStatus {
     LOSE,
     DRAW,
     NONE,
-}
-
-pub type ActionFn = fn(state: &State) -> (Option<(usize, usize)>, Option<Piece>);
-
-pub fn play_game(player_1_action_fn: ActionFn, player_2_action_fn: ActionFn) {
-    let mut state = State::new();
-    state.print();
-
-    while !state.is_done() {
-        {
-            println!("1p ----------------------------------------");
-
-            let (action, piece) = player_1_action_fn(&state);
-            if let Some((h, w)) = action {
-                state.put_piece(h, w);
-            }
-            if state.is_done() {
-                break;
-            }
-            if let Some(piece) = piece {
-                state.select_piece(piece);
-            }
-            state.print();
-        }
-        {
-            println!("2p ----------------------------------------");
-
-            let (action, piece) = player_2_action_fn(&state);
-            if let Some((h, w)) = action {
-                state.put_piece(h, w);
-            }
-            if state.is_done() {
-                break;
-            }
-            if let Some(piece) = piece {
-                state.select_piece(piece);
-            }
-            state.print();
-        }
-    }
-    state.print();
-
-    match state.get_winning_status() {
-        WinningStatus::WIN => println!("winner: {}", if state.is_first_player() { "1p" } else { "2p" }),
-        WinningStatus::DRAW => println!("DRAW"),
-        _ => panic!("unreachable code"),
-    }
 }

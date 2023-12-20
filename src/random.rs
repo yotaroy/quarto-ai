@@ -1,5 +1,5 @@
-use rand::Rng;
 use crate::quarto::{Piece, State};
+use rand::Rng;
 
 pub fn random_action(state: &State) -> (Option<(usize, usize)>, Option<Piece>) {
     let mut rng = rand::thread_rng();

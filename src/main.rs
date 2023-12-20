@@ -1,6 +1,7 @@
-use crate::quarto::play_game;
 use crate::random::random_action;
+use play::play_game;
 
+mod play;
 mod quarto;
 mod random;
 
