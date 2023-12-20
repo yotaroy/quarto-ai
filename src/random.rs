@@ -9,7 +9,9 @@ pub fn random_action(state: &State) -> (Option<(usize, usize)>, Option<Piece>) {
         put = Some(*actions.get(rng.gen::<usize>() % actions.len()).unwrap());
     }
     let mut select: Option<Piece> = None;
-    if put.is_none() || !state.can_put_then_win(put.unwrap().0, put.unwrap().1) {
+    if (put.is_none() || !state.can_put_then_win(put.unwrap().0, put.unwrap().1))
+        && !state.is_last_turn()
+    {
         let actions = state.legal_pieces();
         select = Some(*actions.get(rng.gen::<usize>() % actions.len()).unwrap());
     }

@@ -11,10 +11,17 @@ fn playout(state: &mut State) -> f64 {
             if let Some(p) = place {
                 state.put_piece(p.0, p.1);
             }
-            if let Some(piece) = piece {
-                state.select_piece(piece);
+            match state.get_winning_status() {
+                WinningStatus::WIN => 1.0,
+                WinningStatus::DRAW => 0.5,
+                WinningStatus::NONE => {
+                    if let Some(piece) = piece {
+                        state.select_piece(piece);
+                    }
+                    1.0 - playout(state)
+                }
+                _ => panic!("unreachable error"),
             }
-            1.0 - playout(state)
         }
         _ => panic!("unreachable error"),
     }
@@ -29,12 +36,12 @@ pub fn primitive_monte_carlo_action(
         legal_places = state.legal_placements();
     }
     let mut legal_pieces = Vec::new();
-    if !state.is_done() {
+    if !state.is_last_turn() {
         legal_pieces = state.legal_pieces();
     }
 
-    let mut values = vec![vec![0.0; max(legal_places.len(), 1)]; max(legal_pieces.len(), 1)];
-    let mut cnts = vec![vec![0usize; max(legal_places.len(), 1)]; max(legal_pieces.len(), 1)];
+    let mut values = vec![vec![0.0; max(legal_pieces.len(), 1)]; max(legal_places.len(), 1)];
+    let mut cnts = vec![vec![0usize; max(legal_pieces.len(), 1)]; max(legal_places.len(), 1)];
     for cnt in 0..playout_number {
         let mut next_state = *state;
         let next_state = &mut next_state;
@@ -48,9 +55,9 @@ pub fn primitive_monte_carlo_action(
             next_state.select_piece(piece);
         };
 
-        values[max(cnt % legal_places.len(), 1)][max(cnt % legal_pieces.len(), 1)] +=
+        values[cnt % max(legal_places.len(), 1)][cnt % max(legal_pieces.len(), 1)] +=
             1.0 - playout(next_state);
-        cnts[max(cnt % legal_places.len(), 1)][max(cnt % legal_pieces.len(), 1)] += 1;
+        cnts[cnt % max(legal_places.len(), 1)][cnt % max(legal_pieces.len(), 1)] += 1;
     }
 
     let mut best_action_idx = (usize::MAX, usize::MAX);

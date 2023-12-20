@@ -181,6 +181,10 @@ impl State {
         self.turn == 0
     }
 
+    pub fn is_last_turn(&self) -> bool {
+        self.turn == 16
+    }
+
     pub fn legal_pieces(&self) -> Vec<Piece> {
         let mut pieces = Vec::new();
         for (idx0, &c) in [Color::Black, Color::White].iter().enumerate() {
@@ -266,14 +270,10 @@ impl State {
         if self.can_win() {
             return true;
         }
-        for x in self.unused_pieces {
-            for y in x {
-                for z in y {
-                    for w in z {
-                        if w {
-                            return false;
-                        }
-                    }
+        for h in 0..SIZE {
+            for w in 0..SIZE {
+                if self.board[h][w].is_none() {
+                    return false;
                 }
             }
         }
