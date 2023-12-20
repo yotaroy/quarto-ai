@@ -1,8 +1,9 @@
-use crate::quarto::State;
+use crate::quarto::play_game;
+use crate::random::random_action;
 
 mod quarto;
+mod random;
 
 fn main() {
-    let game = State::new();
-    game.print();
+    play_game(random_action, random_action);
 }

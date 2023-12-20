@@ -5,7 +5,7 @@ use std::fmt::Formatter;
 const SIZE: usize = 4;
 
 #[derive(Clone, Copy, Hash, Eq, PartialEq)]
-struct Piece {
+pub struct Piece {
     color: Color,
     shape: Shape,
     height: Height,
@@ -128,8 +128,12 @@ impl State {
         placements
     }
 
-    pub fn legal_pieces(&self) -> &HashSet<Piece> {
-        &self.unused_pieces
+    pub fn is_first_turn(&self) -> bool {
+        self.turn == 0
+    }
+
+    pub fn legal_pieces(&self) -> Vec<&Piece> {
+        self.unused_pieces.iter().collect()
     }
 
     pub fn put_piece(&mut self, h: usize, w: usize) {
@@ -201,6 +205,44 @@ impl State {
         color.len() == 1 || shape.len() == 1 || height.len() == 1 || top.len() == 1
     }
 
+    pub fn is_done(&self) -> bool {
+        self.unused_pieces.is_empty() || self.can_win()
+    }
+
+    pub fn get_winning_status(&self) -> WinningStatus {
+        if !self.is_done() {
+            return WinningStatus::NONE;
+        }
+        if self.can_win() {
+            return WinningStatus::WIN;
+        }
+        WinningStatus::DRAW
+    }
+
+    fn is_first_player(&self) -> bool {
+        self.active_player == 0
+    }
+
+    pub fn get_first_player_score_for_win_rate(&self) -> f64 {
+        match self.get_winning_status() {
+            WinningStatus::WIN => {
+                if self.is_first_player() {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+            WinningStatus::LOSE => {
+                if self.is_first_player() {
+                    0.0
+                } else {
+                    1.0
+                }
+            }
+            _ => 0.5,
+        }
+    }
+
     pub fn print(&self) {
         println!("turn: {}", self.turn);
         if self.selected_piece.is_some() {
@@ -231,5 +273,59 @@ impl fmt::Display for State {
         }
         writeln!(f, "+--------+--------+--------+--------+")?;
         Ok(())
+    }
+}
+
+pub enum WinningStatus {
+    WIN,
+    LOSE,
+    DRAW,
+    NONE,
+}
+
+pub type ActionFn = fn(state: &State) -> (Option<(usize, usize)>, Option<Piece>);
+
+pub fn play_game(player_1_action_fn: ActionFn, player_2_action_fn: ActionFn) {
+    let mut state = State::new();
+    state.print();
+
+    while !state.is_done() {
+        {
+            println!("1p ----------------------------------------");
+
+            let (action, piece) = player_1_action_fn(&state);
+            if let Some((h, w)) = action {
+                state.put_piece(h, w);
+            }
+            if state.is_done() {
+                break;
+            }
+            if let Some(piece) = piece {
+                state.select_piece(piece);
+            }
+            state.print();
+        }
+        {
+            println!("2p ----------------------------------------");
+
+            let (action, piece) = player_2_action_fn(&state);
+            if let Some((h, w)) = action {
+                state.put_piece(h, w);
+            }
+            if state.is_done() {
+                break;
+            }
+            if let Some(piece) = piece {
+                state.select_piece(piece);
+            }
+            state.print();
+        }
+    }
+    state.print();
+
+    match state.get_winning_status() {
+        WinningStatus::WIN => println!("winner: {}", if state.is_first_player() { "1p" } else { "2p" }),
+        WinningStatus::DRAW => println!("DRAW"),
+        _ => panic!("unreachable code"),
     }
 }
