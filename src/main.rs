@@ -1,5 +1,5 @@
-use crate::montecarlo::primitive_monte_carlo_action;
-use crate::play::test_first_player_win_rate;
+use crate::montecarlo::{mcts_action, primitive_monte_carlo_action};
+use crate::play::{play_game, test_first_player_win_rate};
 use crate::quarto::{Piece, State};
 use crate::random::random_action;
 
@@ -11,6 +11,9 @@ mod random;
 fn main() {
     // play_game(random_action, random_action);
     // play_game(human_action, random_action);
+    // play_game(|state: &State| -> (Option<(usize, usize)>, Option<Piece>) {
+    //     mcts_action(state, 1000)
+    // }, random_action);
     test_first_player_win_rate(
         100,
         (
@@ -20,7 +23,13 @@ fn main() {
                     primitive_monte_carlo_action(state, 1000)
                 },
             ),
-            ("randomAI", random_action),
+            (
+                "mctsAction 1000",
+                |state: &State| -> (Option<(usize, usize)>, Option<Piece>) {
+                    mcts_action(state, 1000)
+                },
+            ),
+            // ("randomAI", random_action),
         ),
     )
 }
